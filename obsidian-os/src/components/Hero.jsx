@@ -1,6 +1,24 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import DriverCard from "./DriverCard";
 
 export default function Hero() {
+  const [drivers, setDrivers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/drivers")
+      .then((res) => res.json())
+      .then((data) => {
+        setDrivers(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch drivers:", err);
+        setLoading(false);
+      });
+  }, []);
+
   return (
     <section className="relative min-h-screen flex flex-col justify-center items-center pt-20 px-8 text-center overflow-hidden">
       {/* Decorative Radial Background */}
@@ -10,39 +28,58 @@ export default function Hero() {
           Intelligence Redefined
         </span>
         <h1 className="font-headline text-5xl md:text-7xl lg:text-8xl text-white leading-[1.1] tracking-tight max-w-4xl mx-auto">
-          Architecting the future of digital ecosystems.
+          Formula 1 Telemetry, 3D Tracks, and AI.
         </h1>
         <p className="font-body text-lg md:text-xl text-on-surface-variant max-w-2xl mx-auto leading-relaxed">
-          Experience a platform designed with editorial precision. ObsidianOS
-          bridges the gap between raw data and professional intuition.
+          An all-in-one analytics platform for F1 professionals and enthusiasts. Track real-time standings, analyze granular telemetry, and use our specialized AI to instantly query decades of motorsport history.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-4">
           <button className="signature-glow px-10 py-4 rounded-full text-on-primary font-bold text-lg hover:shadow-[0_0_30px_rgba(130,239,92,0.3)] transition-all active:scale-95">
-            Start Building →
+            Race Telemetry →
           </button>
           <button className="bg-surface-container-high px-10 py-4 rounded-full text-white font-semibold text-lg hover:bg-surface-bright transition-colors active:scale-95">
-            View Documentation
+            Ask F1 AI
           </button>
         </div>
       </div>
-      {/* Hero Abstract Visual */}
-      <div className="mt-24 w-full max-w-6xl aspect-video rounded-3xl overflow-hidden glass-panel relative group">
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent z-10"></div>
-        <img
-          className="w-full h-full object-cover grayscale opacity-60 group-hover:grayscale-0 transition-all duration-1000"
-          data-alt="Abstract dark landscape with flowing neon green lines"
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuAHx5VWbzNAIcHXHGP__1ryZqH9xbLLb8q16CiVs17UIoRqM15Gu2Mp9hh4F7CkhlrZcP6Eq4dK_UXDds2UWNtnt-kWgUm7_ZNyujvHFCyPkzcdI2Du91Lm_6GWBuw-zdzmdQPvtA_QXAvDE35Z3w4Uw0tFHvdZx59LzRlbTF5nzMrZ7pRBTiiBsgeDuwB0YnlG9bFs50SIM67wfNlTSbBobOexqYqdZcur-1WxCZU7a5QzTA7AnDZpmYEZreegpjgwAF_CxFVx2FV7"
-          alt="Abstract dark landscape with flowing neon green lines"
-        />
-        <div className="absolute inset-0 flex items-center justify-center z-20">
-          <div className="w-24 h-24 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center cursor-pointer hover:scale-110 transition-transform">
-            <span
-              className="material-symbols-outlined text-white text-4xl"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              play_arrow
-            </span>
+
+      {/* Featured Drivers Grid */}
+      <div className="mt-24 w-full max-w-6xl relative z-10">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-8 rounded-full bg-primary" />
+            <h2 className="font-headline text-2xl md:text-3xl text-white tracking-tight">
+              2026 Grid
+            </h2>
           </div>
+          <span className="text-on-surface-variant/40 font-label text-sm tracking-widest uppercase">
+            Featured Drivers
+          </span>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
+            {drivers.slice(0, 4).map((driver) => (
+              <DriverCard key={driver.driverId} driver={driver} />
+            ))}
+          </div>
+        )}
+
+        {/* Show More Button */}
+        <div className="mt-10 flex justify-center">
+          <Link
+            to="/drivers"
+            className="group/btn inline-flex items-center gap-3 signature-glow px-10 py-4 rounded-full text-on-primary font-bold text-lg hover:shadow-[0_0_40px_rgba(130,239,92,0.35)] transition-all active:scale-95"
+          >
+            View All Drivers
+            <span className="material-symbols-outlined text-xl group-hover/btn:translate-x-1 transition-transform">
+              arrow_forward
+            </span>
+          </Link>
         </div>
       </div>
     </section>
