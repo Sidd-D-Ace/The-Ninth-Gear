@@ -5,23 +5,27 @@ import { Link } from "react-router-dom";
 
 export default function DriversPage() {
   const [drivers, setDrivers] = useState([]);
+  const [teamStandings, setTeamStandings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState("grid"); // "grid" | "list"
+  const [viewMode, setViewMode] = useState("drivers"); // "drivers" | "teams"
 
   useEffect(() => {
-    fetch("/api/drivers")
-      .then((res) => res.json())
-      .then((data) => {
-        setDrivers(data);
+    Promise.all([
+      fetch("/api/drivers").then((r) => r.json()),
+      fetch("/api/team-standings").then((r) => r.json()),
+    ])
+      .then(([driverData, teamData]) => {
+        setDrivers(driverData);
+        if (!teamData.error) setTeamStandings(teamData);
         setLoading(false);
       })
       .catch((err) => {
-        console.error("Failed to fetch drivers:", err);
+        console.error("Failed to fetch data:", err);
         setLoading(false);
       });
   }, []);
 
-  // Team accent colors (same as DriverCard)
+  // Team accent colors
   const teamColors = {
     "Red Bull Racing": "#3671C6",
     "McLaren": "#FF8700",
@@ -45,55 +49,65 @@ export default function DriversPage() {
       <main className="pt-28 pb-20 px-6 md:px-12 max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8 space-y-4">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 text-on-surface-variant/60 hover:text-primary transition-colors font-label text-sm"
-          >
-            <span className="material-symbols-outlined text-base">
-              arrow_back
-            </span>
-            Back to Home
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 text-on-surface-variant/60 hover:text-primary transition-colors font-label text-sm"
+            >
+              <span className="material-symbols-outlined text-base">
+                arrow_back
+              </span>
+              Back to Home
+            </Link>
+            <Link
+              to="/drivers/grid"
+              className="inline-flex items-center gap-2 text-on-surface-variant/60 hover:text-primary transition-colors font-label text-sm ml-2 px-4 py-1.5 rounded-full border border-outline-variant/30 hover:border-primary/50"
+            >
+              <span className="material-symbols-outlined text-base">
+                grid_view
+              </span>
+              Explore Grid
+            </Link>
+          </div>
           <div className="flex items-end justify-between">
             <div>
               <span className="label-md inline-block px-4 py-1.5 rounded-full bg-surface-container-high text-primary tracking-widest uppercase text-[0.7rem] font-medium mb-4">
                 2026 Season
               </span>
               <h1 className="font-headline text-4xl md:text-5xl lg:text-6xl text-white leading-tight tracking-tight">
-                The Grid
+                Standings
               </h1>
               <p className="mt-3 text-on-surface-variant font-body text-lg max-w-xl">
-                All 22 drivers competing in the 2026 Formula 1 World
-                Championship.
+                Current standings for the 2026 Formula 1 World Championship.
               </p>
 
               {/* View Toggle Buttons */}
               <div className="flex items-center gap-2 mt-5">
                 <button
-                  onClick={() => setViewMode("list")}
+                  onClick={() => setViewMode("drivers")}
                   className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-label text-sm font-semibold transition-all duration-300 ${
-                    viewMode === "list"
+                    viewMode === "drivers"
                       ? "bg-primary text-on-primary shadow-[0_0_20px_rgba(130,239,92,0.25)]"
                       : "bg-surface-container-high text-on-surface-variant hover:bg-surface-bright"
                   }`}
                 >
                   <span className="material-symbols-outlined text-base">
-                    view_list
+                    person
                   </span>
-                  List View
+                  Drivers
                 </button>
                 <button
-                  onClick={() => setViewMode("grid")}
+                  onClick={() => setViewMode("teams")}
                   className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-label text-sm font-semibold transition-all duration-300 ${
-                    viewMode === "grid"
+                    viewMode === "teams"
                       ? "bg-primary text-on-primary shadow-[0_0_20px_rgba(130,239,92,0.25)]"
                       : "bg-surface-container-high text-on-surface-variant hover:bg-surface-bright"
                   }`}
                 >
                   <span className="material-symbols-outlined text-base">
-                    grid_view
+                    groups
                   </span>
-                  Grid View
+                  Teams
                 </button>
               </div>
             </div>
@@ -110,15 +124,78 @@ export default function DriversPage() {
           <div className="flex items-center justify-center py-20">
             <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
           </div>
-        ) : viewMode === "grid" ? (
-          /* ── Grid View ─────────────────────────────────── */
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 md:gap-6">
-            {drivers.map((driver) => (
-              <DriverCard key={driver.driverId} driver={driver} />
-            ))}
+        ) : viewMode === "teams" ? (
+          /* ── Teams Table View ─────────────── */
+          <div className="rounded-2xl overflow-hidden border border-outline-variant/30 bg-surface-container">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-outline-variant/20 bg-surface-container-high/60">
+                  <th className="px-5 py-4 font-label text-xs uppercase tracking-[0.15em] text-on-surface-variant/60 font-semibold w-16">
+                    Pos
+                  </th>
+                  <th className="px-5 py-4 font-label text-xs uppercase tracking-[0.15em] text-on-surface-variant/60 font-semibold">
+                    Constructor
+                  </th>
+                  <th className="px-5 py-4 font-label text-xs uppercase tracking-[0.15em] text-on-surface-variant/60 font-semibold text-right">
+                    Points
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {teamStandings.map((team, idx) => {
+                  const accent = teamColors[team.team_name] || "#82ef5c";
+                  const isTop3 = team.position && parseInt(team.position) <= 3;
+                  return (
+                    <tr
+                      key={team.team_name}
+                      className={`border-b border-outline-variant/10 transition-colors duration-200 hover:bg-surface-container-high/40 group ${
+                        isTop3 ? "bg-surface-container-high/20" : ""
+                      }`}
+                    >
+                      {/* Position */}
+                      <td className="px-5 py-4">
+                        <span
+                          className={`font-headline text-lg font-bold ${
+                            isTop3 ? "text-primary" : "text-on-surface-variant/50"
+                          }`}
+                        >
+                          {team.position ?? "–"}
+                        </span>
+                      </td>
+
+                      {/* Team */}
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: accent }}
+                          />
+                          <span className="font-headline text-lg text-white font-semibold">
+                            {team.team_name}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Points */}
+                      <td className="px-5 py-4 text-right">
+                        <span
+                          className={`font-headline text-lg font-bold ${
+                            isTop3
+                              ? "text-white"
+                              : "text-on-surface-variant/70"
+                          }`}
+                        >
+                          {team.points ?? "–"}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         ) : (
-          /* ── List / Table View ─────────────────────────── */
+          /* ── Driver List / Table View ─────────────────── */
           <div className="rounded-2xl overflow-hidden border border-outline-variant/30 bg-surface-container">
             <table className="w-full text-left">
               <thead>

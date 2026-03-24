@@ -12,7 +12,9 @@ import requests
 import pandas as pd
 
 CSV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "RaceData", "2026_standings.csv")
+TEAM_CSV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "RaceData", "2026_team_standings.csv")
 URL = "https://www.formula1.com/en/results/2026/drivers"
+TEAM_URL = "https://www.formula1.com/en/results/2026/team"
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -52,7 +54,52 @@ def scrape_standings():
     return df
 
 
+def scrape_team_standings():
+    """Scrape F1 team (constructor) standings from formula1.com and save to CSV."""
+    print("Fetching team standings from Formula1.com...")
+    response = requests.get(TEAM_URL, headers=HEADERS, timeout=15)
+    response.raise_for_status()
+
+    tables = pd.read_html(StringIO(response.text))
+    df = tables[0]
+    df = df.dropna(axis=1, how="all")
+
+    # Clean team names — remove trailing 3-letter code if present
+    if "Team" in df.columns:
+        df["Team"] = (
+            df["Team"]
+            .str.replace(r"[A-Z]{3}$", "", regex=True)
+            .str.replace("\xa0", " ", regex=False)
+            .str.strip()
+        )
+
+    # Rename and select columns
+    col_map = {}
+    for c in df.columns:
+        cl = c.lower().strip().rstrip(".")
+        if cl in ("pos", "pos."):
+            col_map[c] = "position"
+        elif cl == "team":
+            col_map[c] = "team_name"
+        elif cl in ("pts", "pts."):
+            col_map[c] = "points"
+
+    df = df.rename(columns=col_map)
+    keep = [c for c in ["position", "team_name", "points"] if c in df.columns]
+    df = df[keep]
+
+    os.makedirs(os.path.dirname(TEAM_CSV_PATH), exist_ok=True)
+    df.to_csv(TEAM_CSV_PATH, index=False)
+
+    print(f"✅ Saved {len(df)} team standings to {TEAM_CSV_PATH}")
+    return df
+
+
 if __name__ == "__main__":
     df = scrape_standings()
     print("\n--- Current 2026 Driver Standings ---")
     print(df.to_string())
+
+    tdf = scrape_team_standings()
+    print("\n--- Current 2026 Team Standings ---")
+    print(tdf.to_string())

@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "DB", "drivers.db")
 STANDINGS_CSV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "RaceData", "2026_standings.csv")
+TEAM_STANDINGS_CSV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "RaceData", "2026_team_standings.csv")
 
 app = FastAPI(title="The Ninth Gear — Drivers API")
 
@@ -43,6 +44,12 @@ STANDINGS_NAME_ALIASES = {
     "Alexander Albon": "Alex Albon",
     "Nico Hulkenberg": "Nico Hülkenberg",
     "Sergio Perez": "Sergio Pérez",
+}
+
+# Map scraped team names → our DB team names
+TEAM_NAME_ALIASES = {
+    "Haas F1 Team": "Haas",
+    "Red Bull Racing (VCARB)": "Racing Bulls",
 }
 
 
@@ -80,6 +87,21 @@ def get_drivers():
         # Sort by position (drivers without standings go last)
         drivers.sort(key=lambda x: (x["position"] is None, float(x["position"]) if str(x["position"]).replace('.','',1).isdigit() else 999))
 
+    # Merge team standings position
+    if os.path.exists(TEAM_STANDINGS_CSV_PATH):
+        with open(TEAM_STANDINGS_CSV_PATH, "r", encoding="utf-8") as f:
+            team_rows = list(csv.DictReader(f))
+        # Build lookup: scraped team name → position (also map aliases)
+        team_pos_map = {}
+        for t in team_rows:
+            tname = t.get("team_name", "").strip()
+            team_pos_map[tname] = t.get("position")
+            alias = TEAM_NAME_ALIASES.get(tname)
+            if alias:
+                team_pos_map[alias] = t.get("position")
+        for d in drivers:
+            d["team_position"] = team_pos_map.get(d["team"])
+
     return drivers
 
 
@@ -95,13 +117,25 @@ def get_standings():
     return rows
 
 
+@app.get("/api/team-standings")
+def get_team_standings():
+    """Return team (constructor) standings from scraped CSV data."""
+    if not os.path.exists(TEAM_STANDINGS_CSV_PATH):
+        return {"error": "No team standings data. Run scrape_standings.py first."}
+
+    with open(TEAM_STANDINGS_CSV_PATH, "r", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    return rows
+
+
 @app.post("/api/standings/refresh")
 def refresh_standings():
-    """Trigger a fresh scrape of standings data."""
+    """Trigger a fresh scrape of standings data (drivers + teams)."""
     try:
-        from scrape_standings import scrape_standings
+        from scrape_standings import scrape_standings, scrape_team_standings
         df = scrape_standings()
-        return {"status": "ok", "count": len(df)}
+        tdf = scrape_team_standings()
+        return {"status": "ok", "driver_count": len(df), "team_count": len(tdf)}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 

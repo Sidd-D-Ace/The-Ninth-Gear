@@ -10,6 +10,7 @@ import Features from "./components/Features";
 import EditorialSplit from "./components/EditorialSplit";
 import Footer from "./components/Footer";
 import DriversPage from "./components/DriversPage";
+import GridPage from "./components/GridPage";
 import RaceArchivePage from "./components/RaceArchivePage";
 import RaceDetailPage from "./components/RaceDetailPage";
 import RacePredictionPage from "./components/RacePredictionPage";
@@ -32,6 +33,7 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/drivers" element={<DriversPage />} />
+        <Route path="/drivers/grid" element={<GridPage />} />
         <Route path="/races" element={<RaceArchivePage />} />
         <Route path="/races/:raceId" element={<RaceDetailPage />} />
         <Route path="/races/:raceId/predict" element={<RacePredictionPage />} />
